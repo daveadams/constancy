@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+#
+# This software is public domain. No rights are reserved. See LICENSE for more information.
+#
+
+require 'constancy/cli'
+
+Constancy::CLI.run

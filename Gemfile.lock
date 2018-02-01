@@ -1,0 +1,27 @@
+PATH
+  remote: .
+  specs:
+    constancy (0.0.0)
+      diffy (~> 3.2)
+      imperium (~> 0.3)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    addressable (2.5.2)
+      public_suffix (>= 2.0.2, < 4.0)
+    diffy (3.2.0)
+    httpclient (2.8.3)
+    imperium (0.3.0)
+      addressable (~> 2.5.0)
+      httpclient (~> 2.8)
+    public_suffix (3.0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  constancy!
+
+BUNDLED WITH
+   1.16.1
