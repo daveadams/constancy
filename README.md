@@ -185,6 +185,8 @@ Constancy is very new software. There's more to be done. Some ideas:
 * Automated tests
 * Logging of changes to files, syslog, other services
 * Allowing other means of providing a Consul token
+* Pull mode to sync from Consul to local filesystem
+* Using CAS to verify the key has not changed in the interim before updating/deleting.
 
 
 ## Contributing
