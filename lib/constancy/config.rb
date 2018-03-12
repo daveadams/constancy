@@ -141,8 +141,12 @@ class Constancy
       raw['sync'].each do |target|
         if target.is_a? Hash
           target['datacenter'] ||= raw['consul']['datacenter']
-          target['chomp'] ||= self.chomp?
-          target['delete'] ||= self.delete?
+          if target['chomp'].nil?
+            target['chomp'] = self.chomp?
+          end
+          if target['delete'].nil?
+            target['delete'] = self.delete?
+          end
         end
 
         if not self.target_whitelist.nil?
