@@ -86,7 +86,7 @@ class Constancy
       resp = self.consul.get(self.prefix, :recurse, dc: self.datacenter)
 
       Constancy::Util.flatten_hash(resp.values).each_pair do |key, value|
-        @remote_items[key.join("/")] = value
+        @remote_items[key.join("/")] = (value.nil? ? '' : value)
       end
 
       @remote_items
