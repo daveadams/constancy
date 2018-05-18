@@ -61,7 +61,8 @@ class Constancy
     end
 
     def local_files
-      @local_files ||= Dir["#{self.base_dir}/**/*"].select { |f| File.file?(f) }
+      # see https://stackoverflow.com/questions/357754/can-i-traverse-symlinked-directories-in-ruby-with-a-glob
+      @local_files ||= Dir["#{self.base_dir}/**{,/*/**}/*"].select { |f| File.file?(f) }
     end
 
     def local_items
