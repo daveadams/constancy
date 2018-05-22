@@ -71,9 +71,9 @@ class Constancy
 
       self.local_files.each do |local_file|
         @local_items[local_file.sub(%r{^#{self.base_dir}/?}, '')] = if self.chomp?
-                                                                      File.read(local_file).chomp
+                                                                      File.read(local_file).chomp.force_encoding(Encoding::ASCII_8BIT)
                                                                     else
-                                                                      File.read(local_file)
+                                                                      File.read(local_file).force_encoding(Encoding::ASCII_8BIT)
                                                                     end
       end
 
