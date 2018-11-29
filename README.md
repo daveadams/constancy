@@ -157,6 +157,25 @@ You can run `constancy config` to get a summary of the defined configuration
 and to double-check config syntax.
 
 
+### Dynamic configuration
+
+The configuration file will be rendered through ERB before being parsed as
+YAML. This can be useful for avoiding repetitive configuration across multiple
+prefixes or datacenters, eg:
+
+    sync:
+    <% %w( dc1 dc2 dc3 ).each do |dc| %>
+      - name: <%= dc %>:myapp-private
+        prefix: private/myapp
+        datacenter: <%= dc %>
+        path: consul/<%= dc %>/private
+        delete: true
+    <% end %>
+
+It's a good idea to sanity-check your ERB by running `constancy config` after
+making any changes.
+
+
 ### Environment configuration
 
 Constancy may be partially configured using environment variables:

@@ -69,7 +69,7 @@ class Constancy
     def parse!
       raw = {}
       begin
-        raw = YAML.load(File.read(self.config_file))
+        raw = YAML.load(ERB.new(File.read(self.config_file)).result)
       rescue
         raise Constancy::ConfigFileInvalid.new("Unable to parse config file as YAML")
       end

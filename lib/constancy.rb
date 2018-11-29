@@ -1,5 +1,6 @@
 # This software is public domain. No rights are reserved. See LICENSE for more information.
 
+require 'erb'
 require 'yaml'
 require 'imperium'
 

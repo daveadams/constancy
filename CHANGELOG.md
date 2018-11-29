@@ -1,3 +1,7 @@
+## 0.1.5 (November 29, 2018)
+
+*IMPROVEMENT*: Pass config file through ERB to allow dynamic configuration.
+
 ## 0.1.4 (August 14, 2018)
 
 *BUG*: Force treating content as ASCII to properly deal with unencoded binary data. (@ccutrer)
