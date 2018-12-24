@@ -112,6 +112,29 @@ required. An example `constancy.yml` is below including explanatory comments:
       #   something other than the datacenter of the Consul agent.
       datacenter: dc1
 
+      # token_source - defaults to 'none'
+      #   'none': expect no Consul token (although env vars will be used if they are set)
+      #   'env': expect Consul token to be set in CONSUL_TOKEN or CONSUL_HTTP_TOKEN
+      #   'vault': read Consul token from Vault based on settings in the 'vault' section
+
+    # the vault section is only necessary if consul.token_source is set to 'vault'
+    vault:
+      # url - defaults to the value of VAULT_ADDR
+      #   The REST API endpoint of your Vault server
+      url: https://your.vault.example
+
+      # path - the path to the endpoint from which to read the Consul token
+      #   The Vault URI path to the Consul token - can be either the Consul
+      #   dynamic backend or a KV endpoint with a static value. If the dynamic
+      #   backend is used, the lease will be automatically revoked when
+      #   constancy exits.
+      path: consul/creds/my-role
+
+      # field - name of the field in which the Consul token is stored
+      #   Defaults to 'token' which is the field used by the dynamic backend
+      #   but can be set to something else for static values.
+      field: token
+
     sync:
       # sync is an array of hashes of sync target configurations
       #   Fields:
@@ -184,13 +207,11 @@ Constancy may be partially configured using environment variables:
   is given to `CONSUL_HTTP_TOKEN`) to set an explicit Consul token to use when
   interacting with the API. Otherwise, by default the agent's `acl_token`
   setting is used implicitly.
-
-
-## Automation
-
-For version 0.1, Constancy does not fully support running non-interactively.
-This is primarily to ensure human observation of any changes being made while
-the software matures. Later versions will allow for full automation.
+* `VAULT_ADDR` and `VAULT_TOKEN` - if `consul.token_source` is set to `vault`
+  these variables are used to authenticate to Vault. If `VAULT_TOKEN` is not
+  set, Constancy will attempt to read a token from `~/.vault-token`. If the
+  `url` field is set, it will take priority over the `VAULT_ADDR` environment
+  variable, but one or the other must be set.
 
 
 ## Roadmap
@@ -203,10 +224,10 @@ Constancy is very new software. There's more to be done. Some ideas:
 * Git awareness (branches, commit state, etc)
 * Automated tests
 * Logging of changes to files, syslog, other services
-* Allowing other means of providing a Consul token
 * Pull mode to sync from Consul to local filesystem
 * Using CAS to verify the key has not changed in the interim before updating/deleting
 * Submitting changes in batches using transactions
+* Optional expansion of YAML or JSON files into multiple keys
 
 
 ## Contributing

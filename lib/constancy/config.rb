@@ -3,13 +3,18 @@
 class Constancy
   class ConfigFileNotFound < RuntimeError; end
   class ConfigFileInvalid < RuntimeError; end
+  class ConsulTokenRequired < RuntimeError; end
+  class VaultConfigInvalid < RuntimeError; end
 
   class Config
     CONFIG_FILENAMES = %w( constancy.yml )
-    VALID_CONFIG_KEYS = %w( sync consul constancy )
-    VALID_CONSUL_CONFIG_KEYS = %w( url datacenter )
+    VALID_CONFIG_KEYS = %w( sync consul vault constancy )
+    VALID_CONSUL_CONFIG_KEYS = %w( url datacenter token_source )
+    VALID_VAULT_CONFIG_KEYS = %w( url path field )
     VALID_CONSTANCY_CONFIG_KEYS = %w( verbose chomp delete color )
     DEFAULT_CONSUL_URL = "http://localhost:8500"
+    DEFAULT_CONSUL_TOKEN_SOURCE = "none"
+    DEFAULT_VAULT_FIELD = "token"
 
     attr_accessor :config_file, :base_dir, :consul, :sync_targets, :target_whitelist
 
@@ -97,7 +102,83 @@ class Constancy
       end
 
       consul_url = raw['consul']['url'] || Constancy::Config::DEFAULT_CONSUL_URL
+
+      # start with a token from the environment, regardless of the token_source setting
       consul_token = ENV['CONSUL_HTTP_TOKEN'] || ENV['CONSUL_TOKEN']
+
+      case raw['consul']['token_source'] || Constancy::Config::DEFAULT_CONSUL_TOKEN_SOURCE
+      when "none"
+        # nothing to do
+
+      when "env"
+        if consul_token.nil? or consul_token == ""
+          raise Constancy::ConsulTokenRequired.new("Consul token_source is set to 'env' but neither CONSUL_TOKEN nor CONSUL_HTTP_TOKEN is set")
+        end
+
+      when "vault"
+        require 'vault'
+
+        raw['vault'] ||= {}
+        if not raw['vault'].is_a? Hash
+          raise Constancy::ConfigFileInvalid.new("'vault' must be a hash")
+        end
+
+        if (raw['vault'].keys - Constancy::Config::VALID_VAULT_CONFIG_KEYS) != []
+          raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the vault config: #{Constancy::Config::VALID_VAULT_CONFIG_KEYS.join(", ")}")
+        end
+
+        vault_path = raw['vault']['path']
+        if vault_path.nil? or vault_path == ""
+          raise Constancy::ConfigFileInvalid.new("vault.path must be specified to use vault as a token source")
+        end
+
+        # prioritize the config file over environment variables for vault address
+        vault_addr = raw['vault']['url'] || ENV['VAULT_ADDR']
+        if vault_addr.nil? or vault_addr == ""
+          raise Constancy::VaultConfigInvalid.new("Vault address must be set in vault.url or VAULT_ADDR")
+        end
+
+        vault_token = ENV['VAULT_TOKEN']
+        if vault_token.nil? or vault_token == ""
+          vault_token_file = File.expand_path("~/.vault-token")
+          if File.exist?(vault_token_file)
+            vault_token = File.read(vault_token_file)
+          else
+            raise Constancy::VaultConfigInvalid.new("Vault token must be set in ~/.vault-token or VAULT_TOKEN")
+          end
+        end
+
+        vault_field = raw['vault']['field'] || Constancy::Config::DEFAULT_VAULT_FIELD
+
+        ENV['VAULT_ADDR'] = vault_addr
+        ENV['VAULT_TOKEN'] = vault_token
+
+        begin
+          response = Vault.logical.read(vault_path)
+          consul_token = response.data[vault_field.to_sym]
+
+          if response.lease_id
+            at_exit {
+              begin
+                Vault.sys.revoke(response.lease_id)
+              rescue => e
+                # this is fine
+              end
+            }
+          end
+
+        rescue => e
+          raise Constancy::VaultConfigInvalid.new("Are you logged in to Vault?\n\n#{e}")
+        end
+
+        if consul_token.nil? or consul_token == ""
+          raise Constancy::VaultConfigInvalid.new("Could not acquire a Consul token from Vault")
+        end
+
+      else
+        raise Constancy::ConfigFileInvalid.new("Only the following values are valid for token_source: none, env, vault")
+      end
+
       self.consul = Imperium::Configuration.new(url: consul_url, token: consul_token)
 
       raw['constancy'] ||= {}

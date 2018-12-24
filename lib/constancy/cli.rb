@@ -86,6 +86,15 @@ USAGE
           end
           STDERR.puts "  #{e}"
           exit 1
+
+        rescue Constancy::ConsulTokenRequired => e
+          STDERR.puts "constancy: ERROR: No Consul token could be found: #{e}"
+          exit 1
+
+        rescue Constancy::VaultConfigInvalid => e
+          STDERR.puts "constancy: ERROR: Vault configuration invalid: #{e}"
+          exit 1
+
         end
 
         if Constancy.config.sync_targets.count < 1
