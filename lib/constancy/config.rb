@@ -10,11 +10,11 @@ class Constancy
     CONFIG_FILENAMES = %w( constancy.yml )
     VALID_CONFIG_KEYS = %w( sync consul vault constancy )
     VALID_CONSUL_CONFIG_KEYS = %w( url datacenter token_source )
-    VALID_VAULT_CONFIG_KEYS = %w( url path field )
+    VALID_VAULT_CONFIG_KEYS = %w( url consul_token_path consul_token_field )
     VALID_CONSTANCY_CONFIG_KEYS = %w( verbose chomp delete color )
     DEFAULT_CONSUL_URL = "http://localhost:8500"
     DEFAULT_CONSUL_TOKEN_SOURCE = "none"
-    DEFAULT_VAULT_FIELD = "token"
+    DEFAULT_VAULT_CONSUL_TOKEN_FIELD = "token"
 
     attr_accessor :config_file, :base_dir, :consul, :sync_targets, :target_whitelist
 
@@ -127,9 +127,9 @@ class Constancy
           raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the vault config: #{Constancy::Config::VALID_VAULT_CONFIG_KEYS.join(", ")}")
         end
 
-        vault_path = raw['vault']['path']
+        vault_path = raw['vault']['consul_token_path']
         if vault_path.nil? or vault_path == ""
-          raise Constancy::ConfigFileInvalid.new("vault.path must be specified to use vault as a token source")
+          raise Constancy::ConfigFileInvalid.new("vault.consul_token_path must be specified to use vault as a token source")
         end
 
         # prioritize the config file over environment variables for vault address
@@ -148,7 +148,7 @@ class Constancy
           end
         end
 
-        vault_field = raw['vault']['field'] || Constancy::Config::DEFAULT_VAULT_FIELD
+        vault_field = raw['vault']['consul_token_field'] || Constancy::Config::DEFAULT_VAULT_CONSUL_TOKEN_FIELD
 
         ENV['VAULT_ADDR'] = vault_addr
         ENV['VAULT_TOKEN'] = vault_token

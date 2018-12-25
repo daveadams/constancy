@@ -1,3 +1,11 @@
+## 0.2.1 (December 25, 2018)
+
+*CHANGE*: Change vault config field names to be more explicit.
+
+## 0.2.0 (December 24, 2018)
+
+*IMPROVEMENT*: Add vault integration for fetching temporary Consul tokens.
+
 ## 0.1.5 (November 29, 2018)
 
 *IMPROVEMENT*: Pass config file through ERB to allow dynamic configuration.

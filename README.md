@@ -123,17 +123,17 @@ required. An example `constancy.yml` is below including explanatory comments:
       #   The REST API endpoint of your Vault server
       url: https://your.vault.example
 
-      # path - the path to the endpoint from which to read the Consul token
+      # consul_token_path - the path to the endpoint from which to read the Consul token
       #   The Vault URI path to the Consul token - can be either the Consul
       #   dynamic backend or a KV endpoint with a static value. If the dynamic
       #   backend is used, the lease will be automatically revoked when
       #   constancy exits.
-      path: consul/creds/my-role
+      consul_token_path: consul/creds/my-role
 
-      # field - name of the field in which the Consul token is stored
+      # consul_token_field - name of the field in which the Consul token is stored
       #   Defaults to 'token' which is the field used by the dynamic backend
       #   but can be set to something else for static values.
-      field: token
+      consul_token_field: token
 
     sync:
       # sync is an array of hashes of sync target configurations
