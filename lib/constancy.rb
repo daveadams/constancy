@@ -16,8 +16,8 @@ class Constancy
       @@config ||= Constancy::Config.new
     end
 
-    def configure(path: nil, targets: nil)
-      @@config = Constancy::Config.new(path: path, targets: targets)
+    def configure(path: nil, targets: nil, call_external_apis: true)
+      @@config = Constancy::Config.new(path: path, targets: targets, call_external_apis: call_external_apis)
     end
 
     def configured?

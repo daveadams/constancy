@@ -5,11 +5,22 @@ class Constancy
     class ConfigCommand
       class << self
         def run
-          Constancy::CLI.configure
+          Constancy::CLI.configure(call_external_apis: false)
 
-          puts "Config file: #{Constancy.config.config_file}"
-          puts " Consul URL: #{Constancy.config.consul.url}"
-          puts "    Verbose: #{Constancy.config.verbose?.to_s.bold}"
+          puts " Config file: #{Constancy.config.config_file}"
+          puts "  Consul URL: #{Constancy.config.consul.url}"
+          puts "     Verbose: #{Constancy.config.verbose?.to_s.bold}"
+          if Constancy.config.consul_token_source == "env"
+            puts
+            puts "Token Source: CONSUL_TOKEN or CONSUL_HTTP_TOKEN environment variable"
+
+          elsif Constancy.config.consul_token_source == "vault"
+            puts
+            puts "Token Source: Vault"
+            puts "   Vault URL: #{Constancy.config.vault_config.url}"
+            puts "  Token Path: #{Constancy.config.vault_config.consul_token_path}"
+            puts " Token Field: #{Constancy.config.vault_config.consul_token_field}"
+          end
           puts
           puts "Sync target defaults:"
           puts "  Chomp trailing newlines from local files: #{Constancy.config.chomp?.to_s.bold}"

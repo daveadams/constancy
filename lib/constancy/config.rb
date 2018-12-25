@@ -1,5 +1,7 @@
 # This software is public domain. No rights are reserved. See LICENSE for more information.
 
+require 'ostruct'
+
 class Constancy
   class ConfigFileNotFound < RuntimeError; end
   class ConfigFileInvalid < RuntimeError; end
@@ -16,7 +18,7 @@ class Constancy
     DEFAULT_CONSUL_TOKEN_SOURCE = "none"
     DEFAULT_VAULT_CONSUL_TOKEN_FIELD = "token"
 
-    attr_accessor :config_file, :base_dir, :consul, :sync_targets, :target_whitelist
+    attr_accessor :config_file, :base_dir, :consul, :consul_token_source, :sync_targets, :target_whitelist, :call_external_apis, :vault_config
 
     class << self
       # discover the nearest config file
@@ -34,7 +36,7 @@ class Constancy
       end
     end
 
-    def initialize(path: nil, targets: nil)
+    def initialize(path: nil, targets: nil, call_external_apis: true)
       if path.nil? or File.directory?(path)
         self.config_file = Constancy::Config.discover(dir: path)
       elsif File.exist?(path)
@@ -50,6 +52,7 @@ class Constancy
       self.config_file = File.expand_path(self.config_file)
       self.base_dir = File.dirname(self.config_file)
       self.target_whitelist = targets
+      self.call_external_apis = call_external_apis
       parse!
     end
 
@@ -106,7 +109,8 @@ class Constancy
       # start with a token from the environment, regardless of the token_source setting
       consul_token = ENV['CONSUL_HTTP_TOKEN'] || ENV['CONSUL_TOKEN']
 
-      case raw['consul']['token_source'] || Constancy::Config::DEFAULT_CONSUL_TOKEN_SOURCE
+      self.consul_token_source = raw['consul']['token_source'] || Constancy::Config::DEFAULT_CONSUL_TOKEN_SOURCE
+      case self.consul_token_source
       when "none"
         # nothing to do
 
@@ -150,29 +154,38 @@ class Constancy
 
         vault_field = raw['vault']['consul_token_field'] || Constancy::Config::DEFAULT_VAULT_CONSUL_TOKEN_FIELD
 
-        ENV['VAULT_ADDR'] = vault_addr
-        ENV['VAULT_TOKEN'] = vault_token
+        self.vault_config = OpenStruct.new(
+          url: vault_addr,
+          consul_token_path: vault_path,
+          consul_token_field: vault_field,
+        )
 
-        begin
-          response = Vault.logical.read(vault_path)
-          consul_token = response.data[vault_field.to_sym]
+        # don't waste time talking to Vault if this is just a config parsing run
+        if self.call_external_apis
+          ENV['VAULT_ADDR'] = vault_addr
+          ENV['VAULT_TOKEN'] = vault_token
 
-          if response.lease_id
-            at_exit {
-              begin
-                Vault.sys.revoke(response.lease_id)
-              rescue => e
-                # this is fine
-              end
-            }
+          begin
+            response = Vault.logical.read(vault_path)
+            consul_token = response.data[vault_field.to_sym]
+
+            if response.lease_id
+              at_exit {
+                begin
+                  Vault.sys.revoke(response.lease_id)
+                rescue => e
+                  # this is fine
+                end
+              }
+            end
+
+          rescue => e
+            raise Constancy::VaultConfigInvalid.new("Are you logged in to Vault?\n\n#{e}")
           end
 
-        rescue => e
-          raise Constancy::VaultConfigInvalid.new("Are you logged in to Vault?\n\n#{e}")
-        end
-
-        if consul_token.nil? or consul_token == ""
-          raise Constancy::VaultConfigInvalid.new("Could not acquire a Consul token from Vault")
+          if consul_token.nil? or consul_token == ""
+            raise Constancy::VaultConfigInvalid.new("Could not acquire a Consul token from Vault")
+          end
         end
 
       else

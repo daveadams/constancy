@@ -1,3 +1,8 @@
+## 0.2.2 (December 25, 2018)
+
+*IMPROVEMENT*: Add Consul token source and Vault config details to 'constancy config' output.
+*IMPROVEMENT*: Don't call external APIs (ie Vault) for 'constancy config' command
+
 ## 0.2.1 (December 25, 2018)
 
 *CHANGE*: Change vault config field names to be more explicit.

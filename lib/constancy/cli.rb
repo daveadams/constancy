@@ -64,11 +64,11 @@ USAGE
         exit 1
       end
 
-      def configure
+      def configure(call_external_apis: true)
         return if Constancy.configured?
 
         begin
-          Constancy.configure(path: self.config_file, targets: self.targets)
+          Constancy.configure(path: self.config_file, targets: self.targets, call_external_apis: call_external_apis)
 
         rescue Constancy::ConfigFileNotFound
           if self.config_file.nil?
