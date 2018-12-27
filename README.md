@@ -1,11 +1,12 @@
 # constancy
 
-Constancy provides simple filesystem-to-Consul KV synchronization.
+Constancy is a simple, straightforward CLI tool for synchronizing data from the
+filesystem to the Consul KV store and vice-versa.
 
 ## Basic Usage
 
 Run `constancy check` to see what differences exist, and `constancy push` to
-synchronize the changes.
+synchronize the changes from the filesystem to Consul.
 
     $ constancy check
     =====================================================================================
@@ -52,6 +53,16 @@ the `--target` flag:
     UPDATE config/myapp/prod/ip-whitelist.json   OK
 
 Run `constancy --help` for additional options and commands.
+
+## Pull Mode
+
+Constancy can also sync _from_ Consul to the local filesystem. This can be
+particularly useful for seeding a git repo with the current contents of a Consul
+KV database.
+
+Run `constancy check --pull` to get a summary of changes, and `constancy pull`
+to actually sync the changes to the local filesystem. Additional arguments such
+as `--target <name>` work in pull mode as well.
 
 
 ## Configuration
@@ -216,18 +227,18 @@ Constancy may be partially configured using environment variables:
 
 ## Roadmap
 
-Constancy is very new software. There's more to be done. Some ideas:
+Constancy is relatively new software. There's more to be done. Some ideas, which
+may or may not ever be implemented:
 
-* Pattern- and prefix-based exclusions
-* Other commands to assist in managing Consul KV sets
+* Optional expansion of YAML or JSON files into multiple keys
+* Using CAS to verify the key has not changed in the interim before updating/deleting
 * Automation support for running non-interactively
+* Pattern- and prefix-based exclusions
+* Logging of changes to files, syslog, other services
+* Other commands to assist in managing Consul KV sets
 * Git awareness (branches, commit state, etc)
 * Automated tests
-* Logging of changes to files, syslog, other services
-* Pull mode to sync from Consul to local filesystem
-* Using CAS to verify the key has not changed in the interim before updating/deleting
 * Submitting changes in batches using transactions
-* Optional expansion of YAML or JSON files into multiple keys
 
 
 ## Contributing

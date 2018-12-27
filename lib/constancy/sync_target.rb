@@ -45,8 +45,12 @@ class Constancy
       @do_delete
     end
 
-    def description
-      "#{self.name.nil? ? '' : self.name.bold + "\n"}#{'local'.blue}:#{self.path} => #{'consul'.cyan}:#{self.datacenter.green}:#{self.prefix}"
+    def description(mode = :push)
+      if mode == :pull
+        "#{self.name.nil? ? '' : self.name.bold + "\n"}#{'consul'.cyan}:#{self.datacenter.green}:#{self.prefix} => #{'local'.blue}:#{self.path}"
+      else
+        "#{self.name.nil? ? '' : self.name.bold + "\n"}#{'local'.blue}:#{self.path} => #{'consul'.cyan}:#{self.datacenter.green}:#{self.prefix}"
+      end
     end
 
     def clear_cache
@@ -94,168 +98,8 @@ class Constancy
       @remote_items
     end
 
-    def diff
-      local = self.local_items
-      remote = self.remote_items
-      all_keys = (local.keys + remote.keys).sort.uniq
-
-      all_keys.collect do |key|
-        excluded = false
-        op = :noop
-        if remote.has_key?(key) and not local.has_key?(key)
-          if self.delete?
-            op = :delete
-          else
-            op = :ignore
-          end
-        elsif local.has_key?(key) and not remote.has_key?(key)
-          op = :create
-        else
-          if remote[key] == local[key]
-            op = :noop
-          else
-            op = :update
-          end
-        end
-
-        consul_key = [self.prefix, key].compact.join("/")
-
-        if self.exclude.include?(key) or self.exclude.include?(consul_key)
-          op = :ignore
-          excluded = true
-        end
-
-        {
-          :op => op,
-          :excluded => excluded,
-          :relative_path => key,
-          :filename => File.join(self.base_dir, key),
-          :consul_key => consul_key,
-          :local_content => local[key],
-          :remote_content => remote[key],
-        }
-      end
-    end
-
-    def items_to_delete
-      self.diff.select { |d| d[:op] == :delete }
-    end
-
-    def items_to_update
-      self.diff.select { |d| d[:op] == :update }
-    end
-
-    def items_to_create
-      self.diff.select { |d| d[:op] == :create }
-    end
-
-    def items_to_ignore
-      self.diff.select { |d| d[:op] == :ignore }
-    end
-
-    def items_to_exclude
-      self.diff.select { |d| d[:op] == :ignore and d[:excluded] == true }
-    end
-
-    def items_to_noop
-      self.diff.select { |d| d[:op] == :noop }
-    end
-
-    def items_to_change
-      self.diff.select { |d| [:delete, :update, :create].include?(d[:op]) }
-    end
-
-    def any_changes?
-      self.items_to_change.count > 0
-    end
-
-    def print_report
-      puts '='*85
-      puts self.description
-
-      puts "  Keys scanned: #{self.diff.count}"
-      if Constancy.config.verbose?
-        puts "  Keys ignored: #{self.items_to_ignore.count}"
-        puts "  Keys in sync: #{self.items_to_noop.count}"
-      end
-
-      puts if self.any_changes?
-
-      self.diff.each do |item|
-        case item[:op]
-        when :create
-          puts "CREATE".bold.green + " #{item[:consul_key]}"
-          puts '-'*85
-          # simulate diff but without complaints about line endings
-          item[:local_content].each_line do |line|
-            puts "+#{line.chomp}".green
-          end
-          puts '-'*85
-
-        when :update
-          puts "UPDATE".bold + " #{item[:consul_key]}"
-          puts '-'*85
-          puts Diffy::Diff.new(item[:remote_content], item[:local_content]).to_s(:color)
-          puts '-'*85
-
-        when :delete
-          if self.delete?
-            puts "DELETE".bold.red + " #{item[:consul_key]}"
-            puts '-'*85
-            # simulate diff but without complaints about line endings
-            item[:remote_content].each_line do |line|
-              puts "-#{line.chomp}".red
-            end
-            puts '-'*85
-          else
-            if Constancy.config.verbose?
-              puts "IGNORE".bold + " #{item[:consul_key]}"
-            end
-          end
-
-        when :ignore
-          if Constancy.config.verbose?
-            puts "IGNORE".bold + " #{item[:consul_key]}"
-          end
-
-        when :noop
-          if Constancy.config.verbose?
-            puts "NO-OP!".bold + " #{item[:consul_key]}"
-          end
-
-        else
-          if Constancy.config.verbose?
-            STDERR.puts "WARNING: unexpected operation '#{item[:op]}' for #{item[:consul_key]}"
-          end
-
-        end
-      end
-
-      if self.items_to_create.count > 0
-        puts
-        puts "Keys to create: #{self.items_to_create.count}".bold
-        self.items_to_create.each do |item|
-          puts "+ #{item[:consul_key]}".green
-        end
-      end
-
-      if self.items_to_update.count > 0
-        puts
-        puts "Keys to update: #{self.items_to_update.count}".bold
-        self.items_to_update.each do |item|
-          puts "~ #{item[:consul_key]}".blue
-        end
-      end
-
-      if self.delete?
-        if self.items_to_delete.count > 0
-          puts
-          puts "Keys to delete: #{self.items_to_delete.count}".bold
-          self.items_to_delete.each do |item|
-            puts "- #{item[:consul_key]}".red
-          end
-        end
-      end
+    def diff(mode)
+      Constancy::Diff.new(target: self, local: self.local_items, remote: self.remote_items, mode: mode)
     end
   end
 end

@@ -1,11 +1,14 @@
 # This software is public domain. No rights are reserved. See LICENSE for more information.
 
 require 'erb'
-require 'yaml'
 require 'imperium'
+require 'fileutils'
+require 'ostruct'
+require 'yaml'
 
 require 'constancy/version'
 require 'constancy/config'
+require 'constancy/diff'
 require 'constancy/sync_target'
 
 class Constancy
