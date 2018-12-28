@@ -251,7 +251,7 @@ class Constancy
           next if not self.target_whitelist.include?(target['name'])
         end
 
-        self.sync_targets << Constancy::SyncTarget.new(config: target, imperium_config: self.consul)
+        self.sync_targets << Constancy::SyncTarget.new(config: target, imperium_config: self.consul, base_dir: self.base_dir)
       end
 
     end

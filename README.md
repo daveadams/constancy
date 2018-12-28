@@ -153,6 +153,10 @@ required. An example `constancy.yml` is below including explanatory comments:
       #       required if you wish to target specific sync targets using
       #       the `--target` CLI flag.
       #     prefix - (required) The Consul KV prefix to synchronize to.
+      #     type - (default: "dir") The type of local file storage. Either
+      #       'dir' to indicate a directory tree of files corresponding to
+      #       Consul keys; or 'file' to indicate a single YAML file with a
+      #       map of relative key paths to values.
       #     datacenter - The Consul datacenter to synchronize to. If not
       #       specified, the `datacenter` setting in the `consul` section
       #       will be used. If that is also not specified, the sync will
@@ -183,8 +187,15 @@ required. An example `constancy.yml` is below including explanatory comments:
           - config/myapp/prod/cowboy-yolo
       - name: myapp-private
         prefix: private/myapp
+        type: dir
         datacenter: dc1
         path: consul/private
+        delete: true
+      - name: yourapp-config
+        prefix: config/yourapp
+        type: file
+        datacenter: dc1
+        path: consul/yourapp.yml
         delete: true
 
 You can run `constancy config` to get a summary of the defined configuration
@@ -230,7 +241,6 @@ Constancy may be partially configured using environment variables:
 Constancy is relatively new software. There's more to be done. Some ideas, which
 may or may not ever be implemented:
 
-* Optional expansion of YAML or JSON files into multiple keys
 * Using CAS to verify the key has not changed in the interim before updating/deleting
 * Automation support for running non-interactively
 * Pattern- and prefix-based exclusions
