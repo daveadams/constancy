@@ -36,7 +36,8 @@ class Constancy
               print '*'
             end
             puts " Datacenter: #{target.datacenter}"
-            puts "   File path: #{target.path}"
+            puts "  Local type: #{target.type == :dir ? 'Directory' : 'Single file'}"
+            puts "   #{target.type == :dir ? " Dir" : "File"} path: #{target.path}"
             puts "      Prefix: #{target.prefix}"
             puts "   Autochomp? #{target.chomp?}"
             puts "      Delete? #{target.delete?}"

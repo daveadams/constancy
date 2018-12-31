@@ -1,14 +1,16 @@
-## 0.3.0 (December 27, 2018)
+## 0.3.0 (December 28, 2018)
+
+**IMPROVEMENT**: Allow syncing a Consul key tree with a single local YAML (or JSON) file.
 
 **IMPROVEMENT**: Pull mode to sync data from Consul to the filesystem.
 
-**PERFORMANCE**: Refactored diff calculation to minimize repeated work
+**PERFORMANCE**: Refactored diff calculation to minimize repeated work.
 
 ## 0.2.2 (December 25, 2018)
 
 **IMPROVEMENT**: Add Consul token source and Vault config details to 'constancy config' output.
 
-**IMPROVEMENT**: Don't call external APIs (ie Vault) for 'constancy config' command
+**IMPROVEMENT**: Don't call external APIs (ie Vault) for 'constancy config' command.
 
 ## 0.2.1 (December 25, 2018)
 

@@ -43,12 +43,24 @@ class Constancy
             excluded = true
           end
 
+          filename =
+            case @target.type
+            when :dir then File.join(@target.base_path, key)
+            when :file then @target.base_path
+            end
+
+          display_filename =
+            case @target.type
+            when :dir then File.join(@target.base_path, key).trim_path
+            when :file then "#{@target.base_path.trim_path}#{':'.gray}#{key.cyan}"
+            end
+
           OpenStruct.new(
             op: op,
             excluded: excluded,
             relative_path: key,
-            filename: File.join(@target.base_dir, key),
-            display_filename: File.join(@target.base_dir, key).sub(%r(^#{ENV['HOME']}), '~'),
+            filename: filename,
+            display_filename: display_filename,
             consul_key: consul_key,
             local_content: @local[key],
             remote_content: @remote[key],
@@ -84,6 +96,13 @@ class Constancy
       @diff.select { |d| [:delete, :update, :create].include?(d.op) }
     end
 
+    def final_items
+      case @mode
+      when :push then @local
+      when :pull then @remote
+      end
+    end
+
     def any_changes?
       self.items_to_change.count > 0
     end
@@ -103,7 +122,11 @@ class Constancy
       from_content_key, to_content_key, to_path_key, to_type_display_name =
         case @mode
         when :push then [:local_content, :remote_content, :consul_key, "Keys"]
-        when :pull then [:remote_content, :local_content, :display_filename, "Files"]
+        when :pull
+          case @target.type
+          when :dir then [:remote_content, :local_content, :display_filename, "Files"]
+          when :file then [:remote_content, :local_content, :display_filename, "File entries"]
+          end
         end
 
       @diff.each do |item|

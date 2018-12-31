@@ -2,12 +2,14 @@
 
 class Constancy
   class SyncTarget
-    VALID_CONFIG_KEYS = %w( name datacenter prefix path exclude chomp delete )
-    attr_accessor :name, :datacenter, :prefix, :path, :exclude, :consul
+    VALID_CONFIG_KEYS = %w( name type datacenter prefix path exclude chomp delete )
+    attr_accessor :name, :type, :datacenter, :prefix, :path, :exclude, :consul
 
     REQUIRED_CONFIG_KEYS = %w( prefix )
+    VALID_TYPES = [ :dir, :file ]
+    DEFAULT_TYPE = :dir
 
-    def initialize(config:, imperium_config:)
+    def initialize(config:, imperium_config:, base_dir:)
       if not config.is_a? Hash
         raise Constancy::ConfigFileInvalid.new("Sync target entries must be specified as hashes")
       end
@@ -17,13 +19,23 @@ class Constancy
       end
 
       if (Constancy::SyncTarget::REQUIRED_CONFIG_KEYS - config.keys) != []
-        raise Constancy::ConfigFileInvalid.new("The following keys are required for a sync target entry: #{Constancy::SyncTarget::REQUIRED_CONFIG_KEYS.join(", ")}")
+        raise Constancy::ConfigFileInvalid.new("The following keys are required in a sync target entry: #{Constancy::SyncTarget::REQUIRED_CONFIG_KEYS.join(", ")}")
       end
 
+      @base_dir = base_dir
       self.datacenter = config['datacenter']
       self.prefix = config['prefix']
       self.path = config['path'] || config['prefix']
       self.name = config['name']
+      self.type = (config['type'] || Constancy::SyncTarget::DEFAULT_TYPE).to_sym
+      unless Constancy::SyncTarget::VALID_TYPES.include?(self.type)
+        raise Constancy::ConfigFileInvalid.new("Sync target '#{self.name || self.path}' has type '#{self.type}'. But only the following types are valid: #{Constancy::SyncTarget::VALID_TYPES.collect(&:to_s).join(", ")}")
+      end
+
+      if self.type == :file and File.directory?(self.base_path)
+        raise Constancy::ConfigFileInvalid.new("Sync target '#{self.name || self.path}' has type 'file', but path '#{self.path}' is a directory.")
+      end
+
       self.exclude = config['exclude'] || []
       if config.has_key?('chomp')
         @do_chomp = config['chomp'] ? true : false
@@ -54,31 +66,40 @@ class Constancy
     end
 
     def clear_cache
-      @base_dir = nil
+      @base_path = nil
       @local_files = nil
       @local_items = nil
       @remote_items = nil
     end
 
-    def base_dir
-      @base_dir ||= File.join(Constancy.config.base_dir, self.path)
+    def base_path
+      @base_path ||= File.join(@base_dir, self.path)
     end
 
     def local_files
       # see https://stackoverflow.com/questions/357754/can-i-traverse-symlinked-directories-in-ruby-with-a-glob
-      @local_files ||= Dir["#{self.base_dir}/**{,/*/**}/*"].select { |f| File.file?(f) }
+      @local_files ||= Dir["#{self.base_path}/**{,/*/**}/*"].select { |f| File.file?(f) }
     end
 
     def local_items
       return @local_items if not @local_items.nil?
       @local_items = {}
 
-      self.local_files.each do |local_file|
-        @local_items[local_file.sub(%r{^#{self.base_dir}/?}, '')] = if self.chomp?
-                                                                      File.read(local_file).chomp.force_encoding(Encoding::ASCII_8BIT)
-                                                                    else
-                                                                      File.read(local_file).force_encoding(Encoding::ASCII_8BIT)
-                                                                    end
+      case self.type
+      when :dir
+        self.local_files.each do |local_file|
+          @local_items[local_file.sub(%r{^#{self.base_path}/?}, '')] =
+            if self.chomp?
+              File.read(local_file).chomp.force_encoding(Encoding::ASCII_8BIT)
+            else
+              File.read(local_file).force_encoding(Encoding::ASCII_8BIT)
+            end
+        end
+
+      when :file
+        if File.exist?(self.base_path)
+          @local_items = YAML.load_file(self.base_path)
+        end
       end
 
       @local_items

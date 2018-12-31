@@ -12,6 +12,8 @@ require 'constancy/diff'
 require 'constancy/sync_target'
 
 class Constancy
+  class InternalError < RuntimeError; end
+
   class << self
     @@config = nil
 
@@ -40,8 +42,13 @@ class Constancy
   end
 end
 
-# monkeypatch String for colors
+# monkeypatch String for display prettiness
 class String
+  # trim_path replaces the HOME directory on an absolute path with '~'
+  def trim_path
+    self.sub(%r(^#{ENV['HOME']}), '~')
+  end
+
   def colorize(s,e=0)
     Constancy.config.color? ? "\e[#{s}m#{self}\e[#{e}m" : self
   end
