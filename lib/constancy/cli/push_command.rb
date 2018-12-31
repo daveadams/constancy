@@ -9,9 +9,11 @@ class Constancy
           STDOUT.sync = true
 
           Constancy.config.sync_targets.each do |target|
-            target.print_report
+            diff = target.diff(:push)
 
-            if not target.any_changes?
+            diff.print_report
+
+            if not diff.any_changes?
               puts
               puts "Everything is in sync. No changes need to be made to this sync target."
               next
@@ -29,11 +31,11 @@ class Constancy
             end
 
             puts
-            target.items_to_change.each do |item|
-              case item[:op]
+            diff.items_to_change.each do |item|
+              case item.op
               when :create
-                print "CREATE".bold.green + " " + item[:consul_key]
-                resp = target.consul.put(item[:consul_key], item[:local_content], dc: target.datacenter)
+                print "CREATE".bold.green + " " + item.consul_key
+                resp = target.consul.put(item.consul_key, item.local_content, dc: target.datacenter)
                 if resp.success?
                   puts "   OK".bold
                 else
@@ -41,8 +43,8 @@ class Constancy
                 end
 
               when :update
-                print "UPDATE".bold.blue + " " + item[:consul_key]
-                resp = target.consul.put(item[:consul_key], item[:local_content], dc: target.datacenter)
+                print "UPDATE".bold.blue + " " + item.consul_key
+                resp = target.consul.put(item.consul_key, item.local_content, dc: target.datacenter)
                 if resp.success?
                   puts "   OK".bold
                 else
@@ -50,8 +52,8 @@ class Constancy
                 end
 
               when :delete
-                print "DELETE".bold.red + " " + item[:consul_key]
-                resp = target.consul.delete(item[:consul_key], dc: target.datacenter)
+                print "DELETE".bold.red + " " + item.consul_key
+                resp = target.consul.delete(item.consul_key, dc: target.datacenter)
                 if resp.success?
                   puts "   OK".bold
                 else
@@ -60,7 +62,7 @@ class Constancy
 
               else
                 if Constancy.config.verbose?
-                  STDERR.puts "constancy: WARNING: unexpected operation '#{item[:op]}' for #{item[:consul_key]}"
+                  STDERR.puts "constancy: WARNING: unexpected operation '#{item.op}' for #{item.consul_key}"
                   next
                 end
 

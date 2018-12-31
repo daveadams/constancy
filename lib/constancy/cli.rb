@@ -4,6 +4,7 @@ require 'constancy'
 require 'diffy'
 require 'constancy/cli/check_command'
 require 'constancy/cli/push_command'
+require 'constancy/cli/pull_command'
 require 'constancy/cli/config_command'
 
 class Constancy
@@ -53,12 +54,16 @@ Usage:
 Commands:
   check        Print a summary of changes to be made
   push         Push changes from filesystem to Consul
+  pull         Pull changes from Consul to filesystem
   config       Print a summary of the active configuration
 
 General options:
   --help           Print help for the given command
   --config <file>  Use the specified config file
   --target <tgt>   Only apply to the specified target name or names (comma-separated)
+
+Options for 'check' command:
+  --pull       Perform dry run in pull mode
 
 USAGE
         exit 1
@@ -116,8 +121,9 @@ USAGE
 
         when :command
           case self.command
-          when 'check'      then Constancy::CLI::CheckCommand.run
+          when 'check'      then Constancy::CLI::CheckCommand.run(self.extra_args)
           when 'push'       then Constancy::CLI::PushCommand.run
+          when 'pull'       then Constancy::CLI::PullCommand.run
           when 'config'     then Constancy::CLI::ConfigCommand.run
           when nil          then self.print_usage
 

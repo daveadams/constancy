@@ -4,12 +4,19 @@ class Constancy
   class CLI
     class CheckCommand
       class << self
-        def run
+        def run(args)
           Constancy::CLI.configure
 
+          mode = if args.include?("--pull")
+                   :pull
+                 else
+                   :push
+                 end
+
           Constancy.config.sync_targets.each do |target|
-            target.print_report
-            if not target.any_changes?
+            diff = target.diff(mode)
+            diff.print_report
+            if not diff.any_changes?
               puts "No changes to make for this sync target."
             end
             puts
