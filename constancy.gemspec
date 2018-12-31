@@ -27,4 +27,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'imperium', '~>0.3'
   s.add_dependency 'diffy', '~>3.2'
   s.add_dependency 'vault', '~>0.12'
+
+  s.add_development_dependency 'rspec', '~> 3.0'
 end
