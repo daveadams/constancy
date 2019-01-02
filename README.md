@@ -161,10 +161,12 @@ required. An example `constancy.yml` is below including explanatory comments:
       #       specified, the `datacenter` setting in the `consul` section
       #       will be used. If that is also not specified, the sync will
       #       happen with the local datacenter of the Consul agent.
-      #     path - (required) The relative filesystem path to the directory
-      #       containing the files with content to synchronize to Consul.
-      #       This path is calculated relative to the directory containing
-      #       the configuration file.
+      #     path - (required) The relative filesystem path to either the
+      #       directory containing the files with content to synchronize
+      #       to Consul if this sync target has type=dir, or the local file
+      #       containing a hash of remote keys if this sync target has
+      #       type=file. This path is calculated relative to the directory
+      #       containing the configuration file.
       #     delete - Whether or not to delete remote keys that do not exist
       #       in the local filesystem. This inherits the setting from the
       #       `constancy` section, or if not specified, defaults to `false`.
@@ -200,6 +202,53 @@ required. An example `constancy.yml` is below including explanatory comments:
 
 You can run `constancy config` to get a summary of the defined configuration
 and to double-check config syntax.
+
+### File sync targets
+
+When using `type: file` for a sync target (see example above), the local path
+should be a YAML (or JSON) file containing a hash of relative key paths to the
+contents of those keys. So for example, given this configuration:
+
+    sync:
+      - name: config
+        prefix: config/yourapp
+        type: file
+        datacenter: dc1
+        path: yourapp.yml
+
+If the file `yourapp.yml` has the following content:
+
+    ---
+    prod/dbname: yourapp
+    prod/message: |
+      Hello, world. This is a multiline message.
+      I hope you like it.
+      Thanks,
+      YourApp
+    prod/app/config.json: |
+      {
+        "port": 8080,
+        "listen": "0.0.0.0",
+        "enabled": true
+      }
+
+Then `constancy push` will attempt to create and/or update the following keys
+with the corresponding content from `yourapp.yml`:
+
+    config/yourapp/prod/dbname
+    config/yourapp/prod/message
+    config/yourapp/prod/app/config.json
+
+Likewise, a `constancy pull` operation will work in reverse, and pull values
+from any keys under `config/yourapp/` into the file `yourapp.yml`, overwriting
+whatever values are there.
+
+Note that JSON is also supported for this file for `push` operations, given that
+YAML parsers will correctly parse JSON. However, `constancy pull` will only
+write out YAML in the current version.
+
+Also important to note that any comments in the YAML file will be lost on a
+`pull` operation that updates a file sync target.
 
 
 ### Dynamic configuration
