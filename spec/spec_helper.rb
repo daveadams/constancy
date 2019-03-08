@@ -4,6 +4,9 @@ $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
 
 require 'constancy'
 
+SPEC_DIR = File.dirname(__FILE__)
+FIXTURE_DIR = File.join(SPEC_DIR, 'fixtures')
+
 RSpec.configure do |config|
   config.disable_monkey_patching!
   config.color = true

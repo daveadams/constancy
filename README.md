@@ -231,6 +231,10 @@ If the file `yourapp.yml` has the following content:
         "listen": "0.0.0.0",
         "enabled": true
       }
+    prod:
+      _: awesome value # the special _ key gets dropped and allows you to set a value for 'prod' and still nest stuff under it
+      redis:
+        port: 6380 # This gets flattened down to 'prod/redis/port' before getting sent along
 
 Then `constancy push` will attempt to create and/or update the following keys
 with the corresponding content from `yourapp.yml`:

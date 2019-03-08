@@ -98,7 +98,7 @@ class Constancy
 
       when :file
         if File.exist?(self.base_path)
-          @local_items = YAML.load_file(self.base_path)
+          @local_items = flatten_hash(nil, YAML.load_file(self.base_path))
         end
       end
 
@@ -121,6 +121,27 @@ class Constancy
 
     def diff(mode)
       Constancy::Diff.new(target: self, local: self.local_items, remote: self.remote_items, mode: mode)
+    end
+
+    private def flatten_hash(prefix, hash)
+      new_hash = {}
+
+      hash.each do |k, v|
+        if k == '_' && !prefix.nil?
+          new_key = prefix
+        else
+          new_key = [prefix, k].compact.join('/')
+        end
+
+        case v
+        when Hash
+          new_hash.merge!(flatten_hash(new_key, v))
+        else
+          new_hash[new_key] = v
+        end
+      end
+
+      new_hash
     end
   end
 end
