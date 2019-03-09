@@ -222,37 +222,92 @@ If the file `yourapp.yml` has the following content:
     prod/dbname: yourapp
     prod/message: |
       Hello, world. This is a multiline message.
-      I hope you like it.
-      Thanks,
-      YourApp
+      Thanks.
     prod/app/config.json: |
       {
         "port": 8080,
-        "listen": "0.0.0.0",
         "enabled": true
       }
-    prod:
-      _: awesome value # the special _ key gets dropped and allows you to set a value for 'prod' and still nest stuff under it
-      redis:
-        port: 6380 # This gets flattened down to 'prod/redis/port' before getting sent along
 
 Then `constancy push` will attempt to create and/or update the following keys
 with the corresponding content from `yourapp.yml`:
 
-    config/yourapp/prod/dbname
-    config/yourapp/prod/message
-    config/yourapp/prod/app/config.json
+| `config/yourapp/prod/dbname` | `yourapp` |
+| `config/yourapp/prod/message` | `Hello, world. This is a multiline message.\nThanks.` |
+| `config/yourapp/prod/app/config.json` | `{\n  "port": 8080,\n  "enabled": true\n}` |
 
-Likewise, a `constancy pull` operation will work in reverse, and pull values
-from any keys under `config/yourapp/` into the file `yourapp.yml`, overwriting
-whatever values are there.
+In addition to specifying the entire relative path in each key, you may also
+reference paths via your file's YAML structure directly. For example:
 
-Note that JSON is also supported for this file for `push` operations, given that
-YAML parsers will correctly parse JSON. However, `constancy pull` will only
-write out YAML in the current version.
+    ---
+    prod:
+      redis:
+        port: 6380
+        host: redis.example.com
 
-Also important to note that any comments in the YAML file will be lost on a
-`pull` operation that updates a file sync target.
+When pushed, this document will create and/or update the following keys:
+
+| `config/yourapp/prod/redis/port` | `6380` |
+| `config/yourapp/prod/redis/host` | `redis.example.com` |
+
+You may mix and match relative paths and document hierarchy to build paths as
+you would like. And you may also use the special key `_` to embed a value for
+a particular prefix while also nesting values underneath it. For example, given
+this local file target content:
+
+    ---
+    prod/postgres:
+      host: db.myproject.example.com
+      port: 10001
+
+    prod:
+      redis:
+        _: Embedded Value
+        port: 6380
+
+    prod/redis/host: cache.myproject.example.com
+
+This file target content would correspond to the following values, when pushed:
+
+| `config/yourapp/prod/postgres/host` | `db.myproject.example.com` |
+| `config/yourapp/prod/postgres/port` | `10001` |
+| `config/yourapp/prod/redis` | `Embedded Value` |
+| `config/yourapp/prod/redis/port` | `6380` |
+| `config/yourapp/prod/redis/host` | `cache.myproject.example.com` |
+
+A `constancy pull` operation against a file type target will work in reverse,
+and pull values from any keys under `config/yourapp/` into the file
+`yourapp.yml`, overwriting whatever values are there.
+
+**NOTE**: Values in local file targets are converted to strings before comparing
+with or uploading to the remote Consul server. However, because YAML parsing
+converts some values (such as `yes` or `no`) to boolean types, the effective
+value of a key with a value of a bare `yes` will be `true` when converted to a
+string. If you need the actual values `yes` or `no`, use quotes around the value
+to force the YAML parser to interpret it as a string.
+
+
+#### IMPORTANT NOTES ABOUT PULL MODE WITH FILE TARGETS
+
+Against a file target, the structure of the local file can vary in a number
+of ways while still producing the same remote structure. Thus, in pull mode,
+Constancy must necessarily choose one particular rendering format, and will not
+be able to retain the exact structure of the local file if you alternate push
+and pull operations.
+
+Specifically, the following caveats are important to note, when pulling a target
+to a local file:
+
+* The local file will be written out as YAML, even if it was originally
+  provided locally as a JSON file, and even if the extension is `.json`.
+
+* Any existing comments in the local file will be lost.
+
+* The document structure will be that of a flat hash will fully-specified
+  relative paths as the keys.
+
+Future versions of Constancy may provide options to modify the behavior for pull
+operations on a per-target basis. Pull requests are always welcome.
 
 
 ### Dynamic configuration
@@ -295,6 +350,7 @@ Constancy is relatively new software. There's more to be done. Some ideas, which
 may or may not ever be implemented:
 
 * Using CAS to verify the key has not changed in the interim before updating/deleting
+* Options for file target pull-mode rendering
 * Automation support for running non-interactively
 * Pattern- and prefix-based exclusions
 * Logging of changes to files, syslog, other services
