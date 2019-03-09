@@ -3,6 +3,7 @@
 * Support more flexible key specification in file targets (@tpickett66) (#4)
 * Improve README documentation for file targets
 * Add a 'targets' command
+* **BUG**: Force convert local values from file targets to strings
 
 ## 0.3.0 (December 28, 2018)
 
