@@ -137,7 +137,7 @@ class Constancy
         when Hash
           new_hash.merge!(flatten_hash(new_key, v))
         else
-          new_hash[new_key] = v
+          new_hash[new_key] = v.to_s
         end
       end
 
