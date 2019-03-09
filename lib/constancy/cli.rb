@@ -6,6 +6,7 @@ require 'constancy/cli/check_command'
 require 'constancy/cli/push_command'
 require 'constancy/cli/pull_command'
 require 'constancy/cli/config_command'
+require 'constancy/cli/targets_command'
 
 class Constancy
   class CLI
@@ -56,6 +57,7 @@ Commands:
   push         Push changes from filesystem to Consul
   pull         Pull changes from Consul to filesystem
   config       Print a summary of the active configuration
+  targets      List target names
 
 General options:
   --help           Print help for the given command
@@ -125,6 +127,7 @@ USAGE
           when 'push'       then Constancy::CLI::PushCommand.run
           when 'pull'       then Constancy::CLI::PullCommand.run
           when 'config'     then Constancy::CLI::ConfigCommand.run
+          when 'targets'    then Constancy::CLI::TargetsCommand.run
           when nil          then self.print_usage
 
           else
