@@ -67,6 +67,12 @@ General options:
 Options for 'check' command:
   --pull       Perform dry run in pull mode
 
+Options for 'pull' command:
+  --yes        Skip confirmation prompt
+
+Options for 'push' command:
+  --yes        Skip confirmation prompt
+
 USAGE
         exit 1
       end
@@ -124,8 +130,8 @@ USAGE
         when :command
           case self.command
           when 'check'      then Constancy::CLI::CheckCommand.run(self.extra_args)
-          when 'push'       then Constancy::CLI::PushCommand.run
-          when 'pull'       then Constancy::CLI::PullCommand.run
+          when 'push'       then Constancy::CLI::PushCommand.run(self.extra_args)
+          when 'pull'       then Constancy::CLI::PullCommand.run(self.extra_args)
           when 'config'     then Constancy::CLI::ConfigCommand.run
           when 'targets'    then Constancy::CLI::TargetsCommand.run
           when nil          then self.print_usage

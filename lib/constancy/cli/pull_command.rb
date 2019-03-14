@@ -4,7 +4,7 @@ class Constancy
   class CLI
     class PullCommand
       class << self
-        def run
+        def run(args)
           Constancy::CLI.configure
           STDOUT.sync = true
 
@@ -22,7 +22,7 @@ class Constancy
             puts
             puts "Do you want to pull these changes?"
             print "  Enter '" + "yes".bold + "' to continue: "
-            answer = gets.chomp
+            answer = args.include?('--yes') ? 'yes' : gets.chomp
 
             if answer.downcase != "yes"
               puts

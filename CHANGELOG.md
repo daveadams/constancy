@@ -1,3 +1,8 @@
+## Next
+
+* Allow skipping the confirmation prompt for the `push` and `pull` commands by
+  passing `--yes`
+
 ## 0.3.1 (March 9, 2019)
 
 * Support more flexible key specification in file targets (@tpickett66) (#4)
