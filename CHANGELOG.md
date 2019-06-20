@@ -1,4 +1,4 @@
-## Next
+## 0.3.2 (June 20 ,2019)
 
 * Allow skipping the confirmation prompt for the `push` and `pull` commands by
   passing `--yes`
