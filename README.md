@@ -232,6 +232,8 @@ If the file `yourapp.yml` has the following content:
 Then `constancy push` will attempt to create and/or update the following keys
 with the corresponding content from `yourapp.yml`:
 
+| Key  | Value  |
+|:-----|:-------|
 | `config/yourapp/prod/dbname` | `yourapp` |
 | `config/yourapp/prod/message` | `Hello, world. This is a multiline message.\nThanks.` |
 | `config/yourapp/prod/app/config.json` | `{\n  "port": 8080,\n  "enabled": true\n}` |
@@ -247,6 +249,8 @@ reference paths via your file's YAML structure directly. For example:
 
 When pushed, this document will create and/or update the following keys:
 
+| Key  | Value  |
+|:-----|:-------|
 | `config/yourapp/prod/redis/port` | `6380` |
 | `config/yourapp/prod/redis/host` | `redis.example.com` |
 
@@ -269,6 +273,8 @@ this local file target content:
 
 This file target content would correspond to the following values, when pushed:
 
+| Key  | Value  |
+|:-----|:-------|
 | `config/yourapp/prod/postgres/host` | `db.myproject.example.com` |
 | `config/yourapp/prod/postgres/port` | `10001` |
 | `config/yourapp/prod/redis` | `Embedded Value` |
