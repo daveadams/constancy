@@ -1,4 +1,8 @@
-## 0.3.2 (June 20 ,2019)
+## 0.3.3 (January 8, 2020)
+
+* Remove repeated `/` in Consul paths
+
+## 0.3.2 (June 20, 2019)
 
 * Allow skipping the confirmation prompt for the `push` and `pull` commands by
   passing `--yes`

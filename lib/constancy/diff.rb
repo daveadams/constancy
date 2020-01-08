@@ -36,7 +36,7 @@ class Constancy
             end
           end
 
-          consul_key = [@target.prefix, key].compact.join("/")
+          consul_key = [@target.prefix, key].compact.join("/").squeeze("/")
 
           if @target.exclude.include?(key) or @target.exclude.include?(consul_key)
             op = :ignore
