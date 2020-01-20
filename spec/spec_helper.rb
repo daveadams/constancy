@@ -2,7 +2,7 @@
 
 $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
 
-require 'constancy'
+require_relative '../lib/constancy'
 
 SPEC_DIR = File.dirname(__FILE__)
 FIXTURE_DIR = File.join(SPEC_DIR, 'fixtures')
