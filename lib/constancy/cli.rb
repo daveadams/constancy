@@ -1,12 +1,12 @@
 # This software is public domain. No rights are reserved. See LICENSE for more information.
 
-require 'constancy'
+require_relative '../constancy'
 require 'diffy'
-require 'constancy/cli/check_command'
-require 'constancy/cli/push_command'
-require 'constancy/cli/pull_command'
-require 'constancy/cli/config_command'
-require 'constancy/cli/targets_command'
+require_relative 'cli/check_command'
+require_relative 'cli/push_command'
+require_relative 'cli/pull_command'
+require_relative 'cli/config_command'
+require_relative 'cli/targets_command'
 
 class Constancy
   class CLI

@@ -6,10 +6,10 @@ require 'fileutils'
 require 'ostruct'
 require 'yaml'
 
-require 'constancy/version'
-require 'constancy/config'
-require 'constancy/diff'
-require 'constancy/sync_target'
+require_relative 'constancy/version'
+require_relative 'constancy/config'
+require_relative 'constancy/diff'
+require_relative 'constancy/sync_target'
 
 class Constancy
   class InternalError < RuntimeError; end
