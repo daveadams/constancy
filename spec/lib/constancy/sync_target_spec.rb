@@ -28,4 +28,30 @@ RSpec.describe Constancy::SyncTarget do
       end
     end
   end
+
+  context 'using a yml file with deeply nested hashes and erb' do
+    let(:tgt) {
+      Constancy::SyncTarget.new(
+        base_dir: FIXTURE_DIR,
+        config: {
+          'type'   => 'file',
+          'path'   => "nested_hashes.erb.yml",
+          'prefix' => 'config/nested',
+          'erb_enabled' => true
+        },
+        imperium_config: Imperium::Configuration.new,
+      )
+    }
+
+    it 'must flatten the nested hashes' do
+      items = tgt.local_items
+      expect(items.values).to all be_a String
+
+      expect(items).to include({'one_key' => 'foo'})
+      expect(items).to include({'nested_hash/two_key' => 'bar'})
+      expect(items).to include({'nested_hash/nested_hash/three_key' => 'baz'})
+      expect(items).to include({'nested_hash/nested_hash/with_erb' => '123'})
+      expect(items).to include({'nested_hash/nested_hash' => 'wat'})
+    end
+  end
 end

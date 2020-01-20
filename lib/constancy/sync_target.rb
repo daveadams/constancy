@@ -2,8 +2,8 @@
 
 class Constancy
   class SyncTarget
-    VALID_CONFIG_KEYS = %w( name type datacenter prefix path exclude chomp delete )
-    attr_accessor :name, :type, :datacenter, :prefix, :path, :exclude, :consul
+    VALID_CONFIG_KEYS = %w( name type datacenter prefix path exclude chomp delete erb_enabled )
+    attr_accessor :name, :type, :datacenter, :prefix, :path, :exclude, :consul, :erb_enabled
 
     REQUIRED_CONFIG_KEYS = %w( prefix )
     VALID_TYPES = [ :dir, :file ]
@@ -47,6 +47,11 @@ class Constancy
       end
 
       self.consul = Imperium::KV.new(imperium_config)
+      self.erb_enabled = config['erb_enabled']
+    end
+
+    def erb_enabled?
+      @erb_enabled
     end
 
     def chomp?
@@ -89,20 +94,39 @@ class Constancy
       when :dir
         self.local_files.each do |local_file|
           @local_items[local_file.sub(%r{^#{self.base_path}/?}, '')] =
-            if self.chomp?
-              File.read(local_file).chomp.force_encoding(Encoding::ASCII_8BIT)
-            else
-              File.read(local_file).force_encoding(Encoding::ASCII_8BIT)
-            end
+            load_local_file(local_file)
         end
 
       when :file
         if File.exist?(self.base_path)
-          @local_items = flatten_hash(nil, YAML.load_file(self.base_path))
+          @local_items = local_items_from_file
         end
       end
 
       @local_items
+    end
+
+    def local_items_from_file
+      if erb_enabled?
+        loaded_file = YAML.load(ERB.new(File.read(self.base_path)).result)
+      else
+        loaded_file = YAML.load_file(self.base_path)
+      end
+
+      flatten_hash(nil, loaded_file)
+    end
+
+    def load_local_file(local_file)
+      file = File.read(local_file)
+
+      if self.chomp?
+        encoded_file = file.chomp.force_encoding(Encoding::ASCII_8BIT)
+      else
+        encoded_file = file.force_encoding(Encoding::ASCII_8BIT)
+      end
+
+      return ERB.new(encoded_file).result if erb_enabled?
+      encoded_file
     end
 
     def remote_items
