@@ -1,0 +1,8 @@
+---
+one_key: foo
+nested_hash:
+  two_key: bar
+  nested_hash:
+    _: wat
+    three_key: baz
+    with_erb: <%= 123 %>
