@@ -1,3 +1,7 @@
+## 0.4.0 (January 21, 2020)
+
+* Enable ERB parsing of local content (@illegalnumbers) (#6)
+
 ## 0.3.3 (January 8, 2020)
 
 * Remove repeated `/` in Consul paths

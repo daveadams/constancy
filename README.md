@@ -180,6 +180,9 @@ required. An example `constancy.yml` is below including explanatory comments:
       #       ignored. At this time there is no provision for specifying
       #       prefixes or patterns. Each key must be fully and explicitly
       #       specified.
+      #     erb_enabled - Whether or not to run the local content through
+      #       ERB parsing before attempting to sync to the remote. Defaults
+      #       to `false`.
       - name: myapp-config
         prefix: config/myapp
         datacenter: dc1
@@ -199,6 +202,7 @@ required. An example `constancy.yml` is below including explanatory comments:
         datacenter: dc1
         path: consul/yourapp.yml
         delete: true
+        erb_enabled: true
 
 You can run `constancy config` to get a summary of the defined configuration
 and to double-check config syntax.
@@ -333,6 +337,12 @@ prefixes or datacenters, eg:
 
 It's a good idea to sanity-check your ERB by running `constancy config` after
 making any changes.
+
+
+### Dynamic content
+
+You can also choose to enable ERB parsing for local content as well, by setting
+`erb_enabled: true` on any sync targets you wish to populate in this way.
 
 
 ### Environment configuration
