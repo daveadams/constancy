@@ -20,14 +20,14 @@ synchronize the changes from the filesystem to Consul.
     local:consul/config => consul:dc1:config/myapp
       Keys scanned: 80
 
-    UPDATE config/myapp/prod/ip-whitelist.json
+    UPDATE config/myapp/prod/ip-allowlist.json
     -------------------------------------------------------------------------------------
     -["10.8.0.0/16"]
     +["10.8.0.0/16","10.9.10.0/24"]
     -------------------------------------------------------------------------------------
 
     Keys to update: 1
-    ~ config/myapp/prod/ip-whitelist.json
+    ~ config/myapp/prod/ip-allowlist.json
 
 You can also limit your command to specific synchronization targets by using
 the `--target` flag:
@@ -38,19 +38,19 @@ the `--target` flag:
     local:consul/config => consul:dc1:config/myapp
       Keys scanned: 80
 
-    UPDATE config/myapp/prod/ip-whitelist.json
+    UPDATE config/myapp/prod/ip-allowlist.json
     -------------------------------------------------------------------------------------
     -["10.8.0.0/16"]
     +["10.8.0.0/16","10.9.10.0/24"]
     -------------------------------------------------------------------------------------
 
     Keys to update: 1
-    ~ config/myapp/prod/ip-whitelist.json
+    ~ config/myapp/prod/ip-allowlist.json
 
     Do you want to push these changes?
       Enter 'yes' to continue: yes
 
-    UPDATE config/myapp/prod/ip-whitelist.json   OK
+    UPDATE config/myapp/prod/ip-allowlist.json   OK
 
 Run `constancy --help` for additional options and commands.
 
@@ -127,6 +127,9 @@ required. An example `constancy.yml` is below including explanatory comments:
       #   'none': expect no Consul token (although env vars will be used if they are set)
       #   'env': expect Consul token to be set in CONSUL_TOKEN or CONSUL_HTTP_TOKEN
       #   'vault': read Consul token from Vault based on settings in the 'vault' section
+      #   'vault.<label>': a named Vault token source, eg `vault.us-east-1` or `vault.dev`
+      #      NOTE: labels must begin with a letter and may contain only (ASCII) letters,
+      #            numbers, hyphens, and underscores
 
     # the vault section is only necessary if consul.token_source is set to 'vault'
     vault:
@@ -145,6 +148,15 @@ required. An example `constancy.yml` is below including explanatory comments:
       #   Defaults to 'token' which is the field used by the dynamic backend
       #   but can be set to something else for static values.
       consul_token_field: token
+
+    # You can define one or more 'vault.<label>' sections to define alternative Vault
+    # token sources for use in individual sync targets.
+    vault.other:
+      url: https://your.vault.example
+      consul_token_path: consul/creds/my-other-role
+    vault.dev:
+      url: https://dev.vault.example
+      consul_token_path: consul/creds/my-dev-role
 
     sync:
       # sync is an array of hashes of sync target configurations
@@ -167,6 +179,10 @@ required. An example `constancy.yml` is below including explanatory comments:
       #       containing a hash of remote keys if this sync target has
       #       type=file. This path is calculated relative to the directory
       #       containing the configuration file.
+      #     token_source - An alternative token source other than the
+      #       default. Potential values are the same as for the
+      #       consul.token_source config value: 'none', 'env', 'vault',
+      #       or 'vault.<label>'.
       #     delete - Whether or not to delete remote keys that do not exist
       #       in the local filesystem. This inherits the setting from the
       #       `constancy` section, or if not specified, defaults to `false`.
@@ -195,6 +211,7 @@ required. An example `constancy.yml` is below including explanatory comments:
         type: dir
         datacenter: dc1
         path: consul/private
+        token_source: vault.dev
         delete: true
       - name: yourapp-config
         prefix: config/yourapp
@@ -354,10 +371,10 @@ Constancy may be partially configured using environment variables:
   interacting with the API. Otherwise, by default the agent's `acl_token`
   setting is used implicitly.
 * `VAULT_ADDR` and `VAULT_TOKEN` - if `consul.token_source` is set to `vault`
-  these variables are used to authenticate to Vault. If `VAULT_TOKEN` is not
-  set, Constancy will attempt to read a token from `~/.vault-token`. If the
-  `url` field is set, it will take priority over the `VAULT_ADDR` environment
-  variable, but one or the other must be set.
+  or `vault.<label>`, these variables are used to authenticate to Vault. If
+  `VAULT_TOKEN` is not set, Constancy will attempt to read a token from
+  `~/.vault-token`. If the `url` field is set, it will take priority over the
+  `VAULT_ADDR` environment variable, but one or the other must be set.
 
 
 ## Roadmap

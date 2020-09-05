@@ -13,7 +13,8 @@ RSpec.describe Constancy::SyncTarget do
             'path'   => "nested_hashes.yml",
             'prefix' => 'config/nested'
           },
-          imperium_config: Imperium::Configuration.new,
+          consul_url: Constancy::Config::DEFAULT_CONSUL_URL,
+          token_source: Constancy::PassiveTokenSource.new,
         )
       }
 
@@ -39,7 +40,8 @@ RSpec.describe Constancy::SyncTarget do
           'prefix' => 'config/nested',
           'erb_enabled' => true
         },
-        imperium_config: Imperium::Configuration.new,
+        consul_url: Constancy::Config::DEFAULT_CONSUL_URL,
+        token_source: Constancy::PassiveTokenSource.new,
       )
     }
 

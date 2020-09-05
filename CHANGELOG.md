@@ -1,3 +1,8 @@
+## 0.5.0 (September 5, 2020)
+
+* Allow multiple Vault sources of Consul tokens to be defined
+* Allow each sync target to define its own Consul token source
+
 ## 0.4.0 (January 21, 2020)
 
 * Enable ERB parsing of local content (@illegalnumbers) (#6)

@@ -3,13 +3,13 @@
 class Constancy
   class SyncTarget
     VALID_CONFIG_KEYS = %w( name type datacenter prefix path exclude chomp delete erb_enabled )
-    attr_accessor :name, :type, :datacenter, :prefix, :path, :exclude, :consul, :erb_enabled
+    attr_accessor :name, :type, :datacenter, :prefix, :path, :exclude, :consul, :erb_enabled, :consul_url, :token_source, :call_external_apis
 
     REQUIRED_CONFIG_KEYS = %w( prefix )
     VALID_TYPES = [ :dir, :file ]
     DEFAULT_TYPE = :dir
 
-    def initialize(config:, imperium_config:, base_dir:)
+    def initialize(config:, consul_url:, token_source:, base_dir:, call_external_apis: true)
       if not config.is_a? Hash
         raise Constancy::ConfigFileInvalid.new("Sync target entries must be specified as hashes")
       end
@@ -46,7 +46,15 @@ class Constancy
         @do_delete = false
       end
 
-      self.consul = Imperium::KV.new(imperium_config)
+      self.call_external_apis = call_external_apis
+      self.consul_url = consul_url
+      self.token_source = token_source
+      token = if self.call_external_apis
+                self.token_source.consul_token
+              else
+                ""
+              end
+      self.consul = Imperium::KV.new(Imperium::Configuration.new(url: self.consul_url, token: token))
       self.erb_enabled = config['erb_enabled']
     end
 

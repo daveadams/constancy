@@ -4,10 +4,12 @@ require 'erb'
 require 'imperium'
 require 'fileutils'
 require 'ostruct'
+require 'vault'
 require 'yaml'
 
 require_relative 'constancy/version'
 require_relative 'constancy/config'
+require_relative 'constancy/token_source'
 require_relative 'constancy/diff'
 require_relative 'constancy/sync_target'
 

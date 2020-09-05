@@ -11,6 +11,8 @@ class Constancy
   class Config
     CONFIG_FILENAMES = %w( constancy.yml )
     VALID_CONFIG_KEYS = %w( sync consul vault constancy )
+    VALID_VAULT_KEY_PATTERNS = [ %r{^vault\.[A-Za-z][A-Za-z0-9_-]*$}, %r{^vault$} ]
+    VALID_CONFIG_KEY_PATTERNS = VALID_VAULT_KEY_PATTERNS
     VALID_CONSUL_CONFIG_KEYS = %w( url datacenter token_source )
     VALID_VAULT_CONFIG_KEYS = %w( url consul_token_path consul_token_field )
     VALID_CONSTANCY_CONFIG_KEYS = %w( verbose chomp delete color )
@@ -18,7 +20,8 @@ class Constancy
     DEFAULT_CONSUL_TOKEN_SOURCE = "none"
     DEFAULT_VAULT_CONSUL_TOKEN_FIELD = "token"
 
-    attr_accessor :config_file, :base_dir, :consul, :consul_token_source, :sync_targets, :target_whitelist, :call_external_apis, :vault_config
+    attr_accessor :config_file, :base_dir, :consul_url, :default_consul_token_source,
+      :sync_targets, :target_allowlist, :call_external_apis, :consul_token_sources
 
     class << self
       # discover the nearest config file
@@ -33,6 +36,15 @@ class Constancy
         end
 
         dir == "/" ? nil : self.discover(dir: File.dirname(dir))
+      end
+
+      def only_valid_config_keys!(keylist)
+        (keylist - VALID_CONFIG_KEYS).each do |key|
+          if not VALID_CONFIG_KEY_PATTERNS.find { |pattern| key =~ pattern }
+            raise Constancy::ConfigFileInvalid.new("'#{key}' is not a valid configuration key")
+          end
+        end
+        true
       end
     end
 
@@ -51,7 +63,7 @@ class Constancy
 
       self.config_file = File.expand_path(self.config_file)
       self.base_dir = File.dirname(self.config_file)
-      self.target_whitelist = targets
+      self.target_allowlist = targets
       self.call_external_apis = call_external_apis
       parse!
     end
@@ -72,7 +84,11 @@ class Constancy
       @use_color
     end
 
-    private
+    def parse_vault_token_sources!(raw)
+      raw.keys.select { |key| VALID_VAULT_KEY_PATTERNS.find { |pattern| key =~ pattern } }.collect do |key|
+        [key, Constancy::VaultTokenSource.new(name: key, config: raw[key])]
+      end.to_h
+    end
 
     def parse!
       raw = {}
@@ -91,116 +107,40 @@ class Constancy
         raise Constancy::ConfigFileInvalid.new("Config file must form a hash")
       end
 
-      if (raw.keys - Constancy::Config::VALID_CONFIG_KEYS) != []
-        raise Constancy::ConfigFileInvalid.new("Only the following keys are valid at the top level of the config: #{Constancy::Config::VALID_CONFIG_KEYS.join(", ")}")
-      end
+      Constancy::Config.only_valid_config_keys!(raw.keys)
+
+      self.consul_token_sources = {
+        "none" => Constancy::PassiveTokenSource.new,
+        "env" => Constancy::EnvTokenSource.new,
+      }.merge(
+        self.parse_vault_token_sources!(raw),
+      )
 
       raw['consul'] ||= {}
       if not raw['consul'].is_a? Hash
         raise Constancy::ConfigFileInvalid.new("'consul' must be a hash")
       end
 
-      if (raw['consul'].keys - Constancy::Config::VALID_CONSUL_CONFIG_KEYS) != []
-        raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the consul config: #{Constancy::Config::VALID_CONSUL_CONFIG_KEYS.join(", ")}")
+      if (raw['consul'].keys - VALID_CONSUL_CONFIG_KEYS) != []
+        raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the consul config: #{VALID_CONSUL_CONFIG_KEYS.join(", ")}")
       end
 
-      consul_url = raw['consul']['url'] || Constancy::Config::DEFAULT_CONSUL_URL
-
-      # start with a token from the environment, regardless of the token_source setting
-      consul_token = ENV['CONSUL_HTTP_TOKEN'] || ENV['CONSUL_TOKEN']
-
-      self.consul_token_source = raw['consul']['token_source'] || Constancy::Config::DEFAULT_CONSUL_TOKEN_SOURCE
-      case self.consul_token_source
-      when "none"
-        # nothing to do
-
-      when "env"
-        if consul_token.nil? or consul_token == ""
-          raise Constancy::ConsulTokenRequired.new("Consul token_source is set to 'env' but neither CONSUL_TOKEN nor CONSUL_HTTP_TOKEN is set")
-        end
-
-      when "vault"
-        require 'vault'
-
-        raw['vault'] ||= {}
-        if not raw['vault'].is_a? Hash
-          raise Constancy::ConfigFileInvalid.new("'vault' must be a hash")
-        end
-
-        if (raw['vault'].keys - Constancy::Config::VALID_VAULT_CONFIG_KEYS) != []
-          raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the vault config: #{Constancy::Config::VALID_VAULT_CONFIG_KEYS.join(", ")}")
-        end
-
-        vault_path = raw['vault']['consul_token_path']
-        if vault_path.nil? or vault_path == ""
-          raise Constancy::ConfigFileInvalid.new("vault.consul_token_path must be specified to use vault as a token source")
-        end
-
-        # prioritize the config file over environment variables for vault address
-        vault_addr = raw['vault']['url'] || ENV['VAULT_ADDR']
-        if vault_addr.nil? or vault_addr == ""
-          raise Constancy::VaultConfigInvalid.new("Vault address must be set in vault.url or VAULT_ADDR")
-        end
-
-        vault_token = ENV['VAULT_TOKEN']
-        if vault_token.nil? or vault_token == ""
-          vault_token_file = File.expand_path("~/.vault-token")
-          if File.exist?(vault_token_file)
-            vault_token = File.read(vault_token_file)
-          else
-            raise Constancy::VaultConfigInvalid.new("Vault token must be set in ~/.vault-token or VAULT_TOKEN")
+      self.consul_url = raw['consul']['url'] || DEFAULT_CONSUL_URL
+      srcname = raw['consul']['token_source'] || DEFAULT_CONSUL_TOKEN_SOURCE
+      self.default_consul_token_source =
+        self.consul_token_sources[srcname].tap do |src|
+          if src.nil?
+            raise Constancy::ConfigFileInvalid.new("Consul token source '#{consul_token_source}' is not defined")
           end
         end
-
-        vault_field = raw['vault']['consul_token_field'] || Constancy::Config::DEFAULT_VAULT_CONSUL_TOKEN_FIELD
-
-        self.vault_config = OpenStruct.new(
-          url: vault_addr,
-          consul_token_path: vault_path,
-          consul_token_field: vault_field,
-        )
-
-        # don't waste time talking to Vault if this is just a config parsing run
-        if self.call_external_apis
-          ENV['VAULT_ADDR'] = vault_addr
-          ENV['VAULT_TOKEN'] = vault_token
-
-          begin
-            response = Vault.logical.read(vault_path)
-            consul_token = response.data[vault_field.to_sym]
-
-            if response.lease_id
-              at_exit {
-                begin
-                  Vault.sys.revoke(response.lease_id)
-                rescue => e
-                  # this is fine
-                end
-              }
-            end
-
-          rescue => e
-            raise Constancy::VaultConfigInvalid.new("Are you logged in to Vault?\n\n#{e}")
-          end
-
-          if consul_token.nil? or consul_token == ""
-            raise Constancy::VaultConfigInvalid.new("Could not acquire a Consul token from Vault")
-          end
-        end
-
-      else
-        raise Constancy::ConfigFileInvalid.new("Only the following values are valid for token_source: none, env, vault")
-      end
-
-      self.consul = Imperium::Configuration.new(url: consul_url, token: consul_token)
 
       raw['constancy'] ||= {}
       if not raw['constancy'].is_a? Hash
         raise Constancy::ConfigFileInvalid.new("'constancy' must be a hash")
       end
 
-      if (raw['constancy'].keys - Constancy::Config::VALID_CONSTANCY_CONFIG_KEYS) != []
-        raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the 'constancy' config block: #{Constancy::Config::VALID_CONSTANCY_CONFIG_KEYS.join(", ")}")
+      if (raw['constancy'].keys - VALID_CONSTANCY_CONFIG_KEYS) != []
+        raise Constancy::ConfigFileInvalid.new("Only the following keys are valid in the 'constancy' config block: #{VALID_CONSTANCY_CONFIG_KEYS.join(", ")}")
       end
 
       # verbose: default false
@@ -233,6 +173,7 @@ class Constancy
 
       self.sync_targets = []
       raw['sync'].each do |target|
+        token_source = self.default_consul_token_source
         if target.is_a? Hash
           target['datacenter'] ||= raw['consul']['datacenter']
           if target['chomp'].nil?
@@ -241,19 +182,31 @@ class Constancy
           if target['delete'].nil?
             target['delete'] = self.delete?
           end
+          if not target['token_source'].nil?
+            token_source = self.consul_token_sources[target['token_source']]
+            if token_source.nil?
+              raise Constancy::ConfigFileInvalid.new("Consul token source '#{target['token_source']}' is not defined")
+            end
+            target.delete('token_source')
+          end
         end
 
-        if not self.target_whitelist.nil?
-          # unnamed targets cannot be whitelisted
+        if not self.target_allowlist.nil?
+          # unnamed targets cannot be allowlisted
           next if target['name'].nil?
 
-          # named targets must be on the whitelist
-          next if not self.target_whitelist.include?(target['name'])
+          # named targets must be on the allowlist
+          next if not self.target_allowlist.include?(target['name'])
         end
 
-        self.sync_targets << Constancy::SyncTarget.new(config: target, imperium_config: self.consul, base_dir: self.base_dir)
+        # only try to fetch consul tokens if we are actually going to do work
+        consul_token = if self.call_external_apis
+                         token_source.consul_token
+                       else
+                         ""
+                       end
+        self.sync_targets << Constancy::SyncTarget.new(config: target, consul_url: consul_url, token_source: token_source, base_dir: self.base_dir, call_external_apis: self.call_external_apis)
       end
-
     end
   end
 end

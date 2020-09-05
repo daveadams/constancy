@@ -8,18 +8,25 @@ class Constancy
           Constancy::CLI.configure(call_external_apis: false)
 
           puts " Config file: #{Constancy.config.config_file}"
-          puts "  Consul URL: #{Constancy.config.consul.url}"
+          puts "  Consul URL: #{Constancy.config.consul_url}"
           puts "     Verbose: #{Constancy.config.verbose?.to_s.bold}"
-          if Constancy.config.consul_token_source == "env"
+          puts
+          puts " Defined Consul Token Sources:"
+          default_src_name = Constancy.config.default_consul_token_source.name
+          srcs = Constancy.config.consul_token_sources
+          ( %w( none env ) + ( srcs.keys.sort - %w( none env ) ) ).each do |name|
             puts
-            puts "Token Source: CONSUL_TOKEN or CONSUL_HTTP_TOKEN environment variable"
-
-          elsif Constancy.config.consul_token_source == "vault"
-            puts
-            puts "Token Source: Vault"
-            puts "   Vault URL: #{Constancy.config.vault_config.url}"
-            puts "  Token Path: #{Constancy.config.vault_config.consul_token_path}"
-            puts " Token Field: #{Constancy.config.vault_config.consul_token_field}"
+            puts "   #{name}:#{ default_src_name == name ? " (DEFAULT)".bold : ""}"
+            case name
+            when "none"
+              puts "     uses CONSUL_HTTP_TOKEN or CONSUL_TOKEN env var if available"
+            when "env"
+              puts "     requires CONSUL_HTTP_TOKEN or CONSUL_TOKEN env var"
+            when /^vault/
+              puts "     address: #{srcs[name].vault_addr}"
+              puts "        path: #{srcs[name].consul_token_path}"
+              puts "       field: #{srcs[name].consul_token_field}"
+            end
           end
           puts
           puts "Sync target defaults:"
@@ -35,16 +42,17 @@ class Constancy
             else
               print '*'
             end
-            puts " Datacenter: #{target.datacenter}"
-            puts "  Local type: #{target.type == :dir ? 'Directory' : 'Single file'}"
-            puts "   #{target.type == :dir ? " Dir" : "File"} path: #{target.path}"
-            puts "      Prefix: #{target.prefix}"
-            puts "   Autochomp? #{target.chomp?}"
-            puts "      Delete? #{target.delete?}"
+            puts "   Datacenter: #{target.datacenter}"
+            puts "    Local type: #{target.type == :dir ? 'Directory' : 'Single file'}"
+            puts "     #{target.type == :dir ? " Dir" : "File"} path: #{target.path}"
+            puts "        Prefix: #{target.prefix}"
+            puts "  Token Source: #{target.token_source.name}"
+            puts "     Autochomp? #{target.chomp?}"
+            puts "        Delete? #{target.delete?}"
             if not target.exclude.empty?
-              puts "  Exclusions:"
+              puts "    Exclusions:"
               target.exclude.each do |exclusion|
-                puts "    - #{exclusion}"
+                puts "      - #{exclusion}"
               end
             end
             puts
